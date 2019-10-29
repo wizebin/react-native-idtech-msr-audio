@@ -1,0 +1,1 @@
+export { parseSwipeData } from './parse';

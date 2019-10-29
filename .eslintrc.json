@@ -1,0 +1,44 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true,
+        "jest": true,
+        "react-native/react-native": true
+    },
+    "extends": "eslint:recommended",
+    "parser": "babel-eslint",
+    "globals": {
+        "Atomics": "readonly",
+        "SharedArrayBuffer": "readonly",
+        "Buffer": "readonly"
+    },
+    "parserOptions": {
+        "ecmaFeatures": {
+            "jsx": true
+        },
+        "ecmaVersion": 2018,
+        "sourceType": "module"
+    },
+    "plugins": [
+        "react",
+        "react-native",
+        "jest"
+    ],
+    "rules": {
+        "react/jsx-uses-react": "error",
+        "react/jsx-uses-vars": "error",
+        "max-len": "off",
+        "brace-style": ["error", "1tbs"],
+        "semi": ["error", "always"],
+        "quotes": ["error", "single"],
+        "indent": ["error", 2],
+        "eqeqeq": "error",
+        "require-await": "error",
+        "no-extend-native": "error",
+        "no-multi-spaces": "error",
+        "no-loop-func": "error",
+        "no-sequences": "error",
+        "no-return-await": "error",
+        "no-extra-bind": "error"
+    }
+}

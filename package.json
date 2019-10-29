@@ -1,16 +1,44 @@
 {
   "name": "react-native-idtech-msr-audio",
   "version": "0.0.4",
-  "main": "index.js",
+  "main": "dist/index.js",
   "author": "Peace Chen",
   "private": true,
   "scripts": {
-    "start": "node node_modules/react-native/local-cli/cli.js start"
+    "test": "jest",
+    "dev": "NODE_ENV=development rollup -c rollup.config.js && npm run copyextras",
+    "build": "NODE_ENV=production rollup -c rollup.config.js && npm run copyextras",
+    "copyextras": "cp ./src/index.d.ts ./dist/index.d.ts | true"
   },
-  "devDependencies": {
+  "peerDependencies": {
     "react": "*",
     "react-native": "*"
   },
   "dependencies": {
+    "buffer": "^5.4.3"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.6.4",
+    "@babel/core": "^7.6.4",
+    "@babel/node": "^7.6.3",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-proposal-decorators": "^7.6.0",
+    "@babel/plugin-proposal-numeric-separator": "^7.2.0",
+    "@babel/plugin-proposal-throw-expressions": "^7.2.0",
+    "@babel/plugin-syntax-dynamic-import": "^7.2.0",
+    "@babel/preset-env": "^7.6.3",
+    "@babel/runtime": "^7.6.3",
+    "babel-eslint": "^10.0.3",
+    "babel-jest": "^24.9.0",
+    "eslint": "^6.6.0",
+    "eslint-plugin-jest": "^23.0.1",
+    "eslint-plugin-react": "^7.16.0",
+    "eslint-plugin-react-native": "^3.8.1",
+    "jest": "^24.9.0",
+    "rollup": "^1.26.0",
+    "rollup-plugin-babel": "^4.3.3"
+  },
+  "engines": {
+    "node": ">=6.0.0"
   }
 }

@@ -258,35 +258,56 @@ RCT_REMAP_METHOD(swipe,
                             @"message": @"Failed to read a valid swipe. Please try again."}];
 }
 
++ (id)valueOrNull: (id)value {
+  if (value == nil) return [NSNull null];
+  return value;
+}
+
++ (NSString *)dataToHex: (NSData*)data {
+  if (data == nil) return nil;
+
+  NSUInteger dataLength = [data length];
+  NSMutableString *string = [NSMutableString stringWithCapacity:dataLength * 2];
+  const unsigned char *dataBytes = [data bytes];
+  for (NSInteger idx = 0; idx < dataLength; ++idx) {
+    [string appendFormat:@"%02x", dataBytes[idx]];
+  }
+  return string;
+}
+
++ (id) hexValueOrNull: (NSData*)data {
+  if (data == nil) return [NSNull null];
+
+  return [IDTECH_MSR_audio dataToHex: data];
+}
+
 //called when SDK received a swipe successfully
 - (void)umSwipe_receivedSwipe:(NSNotification *)notification {
-  NSData *data = [notification object];
+  NSData *data = [NSData dataWithData: [notification object]];
   UMCardData *cd = [[UMCardData alloc] initWithBytes:data];
 
   // RCTConvert-serializable object
   NSObject * swipeData;
-  if (cd.isAesEncrypted) {
-    NSString *track1 = [[NSString alloc] initWithData:cd.track1 encoding:NSUTF8StringEncoding];
-    NSString *track2 = [[NSString alloc] initWithData:cd.track2 encoding:NSUTF8StringEncoding];
-    NSString *track3 = [[NSString alloc] initWithData:cd.track3 encoding:NSUTF8StringEncoding];
-    NSString *track1_encrypted = [[NSString alloc] initWithData:cd.track1_encrypted encoding:NSUTF8StringEncoding];
-    NSString *track2_encrypted = [[NSString alloc] initWithData:cd.track2_encrypted encoding:NSUTF8StringEncoding];
-    NSString *track3_encrypted = [[NSString alloc] initWithData:cd.track3_encrypted encoding:NSUTF8StringEncoding];
+  NSArray * tracks = @[[IDTECH_MSR_audio hexValueOrNull:cd.track1], [IDTECH_MSR_audio hexValueOrNull:cd.track2], [IDTECH_MSR_audio hexValueOrNull:cd.track3]];
+  NSArray * encryptedTracks = @[[IDTECH_MSR_audio hexValueOrNull: cd.track1_encrypted], [IDTECH_MSR_audio hexValueOrNull: cd.track2_encrypted], [IDTECH_MSR_audio hexValueOrNull: cd.track3_encrypted]];
 
+  if (cd.isEncrypted) {
     swipeData = @{
-      @"isValid": [NSNumber numberWithBool:cd.isValid],
-      @"isAesEncrypted": [NSNumber numberWithBool:cd.isAesEncrypted],
-      @"tracks": @[track1, track2, track3],
-      @"tracks_encrypted": @[track1_encrypted, track2_encrypted, track3_encrypted],
-      @"serialNumber": [[NSString alloc] initWithData:cd.serialNumber encoding:NSUTF8StringEncoding],
-      @"KSN": [[NSString alloc] initWithData:cd.KSN encoding:NSUTF8StringEncoding]
+      @"valid": [NSNumber numberWithBool:cd.isValid],
+      @"aes": [NSNumber numberWithBool:cd.isAesEncrypted],
+      @"tracks": tracks,
+      @"encrypted_tracks": encryptedTracks,
+      @"serial": [[NSString alloc] initWithData:cd.serialNumber encoding:NSISOLatin1StringEncoding],
+      @"ksn": [IDTECH_MSR_audio hexValueOrNull: cd.KSN],
+      @"raw": [IDTECH_MSR_audio hexValueOrNull: data]
     };
   }
   else {
     swipeData = @{
-      @"isValid": [NSNumber numberWithBool:cd.isValid],
-      @"isAesEncrypted": [NSNumber numberWithBool:cd.isAesEncrypted],
-      @"tracks": @[ [[NSString alloc] initWithData:cd.byteData encoding:NSUTF8StringEncoding] ]
+      @"valid": [NSNumber numberWithBool:cd.isValid],
+      @"aes": [NSNumber numberWithBool:cd.isAesEncrypted],
+      @"tracks": tracks,
+      @"raw": [IDTECH_MSR_audio hexValueOrNull: data]
     };
   }
 

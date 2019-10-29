@@ -157,6 +157,19 @@ public class IDTechMSRAudioModule extends ReactContextBaseJavaModule implements 
         .emit(eventName, params);
   }
 
+  private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+  public static String bytesToHex(byte[] bytes) {
+      if (bytes == null) return "";
+
+      char[] hexChars = new char[bytes.length * 2];
+      for (int j = 0; j < bytes.length; j++) {
+          int v = bytes[j] & 0xFF;
+          hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+          hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+      }
+      return new String(hexChars);
+  }
+
   // ---------------------------------------------------------------------------
   // Required callbacks for uniMagReaderMsg
   public void onReceiveMsgToConnect() {
@@ -195,17 +208,34 @@ public class IDTechMSRAudioModule extends ReactContextBaseJavaModule implements 
   }
 
   public void onReceiveMsgCardData(byte flagOfCardData, byte[] cardData) {
-    WritableArray cardDataArray = Arguments.createArray();
-    cardDataArray.pushString(new String(cardData, java.nio.charset.StandardCharsets.ISO_8859_1));
+    String fullData = IDTechMSRAudioModule.bytesToHex(cardData);
+
+    UmCardData parser = new UmCardData(cardData);
     WritableMap data = Arguments.createMap();
-    data.putBoolean("isValid", true);
-    data.putBoolean("isAesEncrypted", (flagOfCardData & (1L << 1)) != 0 && (flagOfCardData & (1L << 2)) != 0);
+    data.putBoolean("valid", parser.isValid);
+    data.putBoolean("aes", parser.isAesEncrypted);
+
+    WritableArray cardDataArray = Arguments.createArray();
+    cardDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track1));
+    cardDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track2));
+    cardDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track3));
+
+    WritableArray encryptedDataArray = Arguments.createArray();
+    encryptedDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track1_encrypted));
+    encryptedDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track2_encrypted));
+    encryptedDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track3_encrypted));
+
     data.putArray("tracks", cardDataArray);
+    data.putArray("encrypted_tracks", encryptedDataArray);
+
+    data.putString("serial", IDTechMSRAudioModule.bytesToHex(parser.serialNumber));
+    data.putString("ksn", IDTechMSRAudioModule.bytesToHex(parser.KSN));
+    data.putString("raw", IDTechMSRAudioModule.bytesToHex(cardData));
 
     WritableMap result = Arguments.createMap();
     result.putString("type", "umSwipe_receivedSwipe");
     result.putString("message", "Successful card swipe");
-    result.putInt("flagOfCardData", flagOfCardData);
+    // result.putInt("flagOfCardData", flagOfCardData);
     result.putMap("data", data);
     sendEvent("IdTechUniMagEvent", result);
   }
