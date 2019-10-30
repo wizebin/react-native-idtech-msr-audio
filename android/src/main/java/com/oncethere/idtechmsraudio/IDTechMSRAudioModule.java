@@ -34,6 +34,7 @@ public class IDTechMSRAudioModule extends ReactContextBaseJavaModule implements 
   private uniMagReader _uniMagReader = null;
   private ReactApplicationContext _reactContext = null;
   private AutoConfigProfile autoConfigProfile = new AutoConfigProfile();
+  public static final String CALLBACK_EVENT_NAME = "IdTechUniMagEvent";
 
 
   public IDTechMSRAudioModule(ReactApplicationContext reactContext) {
@@ -85,7 +86,7 @@ public class IDTechMSRAudioModule extends ReactContextBaseJavaModule implements 
       StructConfigParameters acProfile = autoConfigProfile.loadAutoConfigProfile(_reactContext);
 
       if (acProfile != null) {
-        sendEvent("IdTechUniMagEvent", autoConfigProfile.toWritableMap(acProfile));
+        sendEvent(CALLBACK_EVENT_NAME, autoConfigProfile.toWritableMap(acProfile));
         _uniMagReader.connectWithProfile(acProfile);
         message = "Found existing auto config profile.";
       }
@@ -174,139 +175,153 @@ public class IDTechMSRAudioModule extends ReactContextBaseJavaModule implements 
   // Required callbacks for uniMagReaderMsg
   public void onReceiveMsgToConnect() {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umConnection_starting");
+    result.putString("originalType", "umConnection_starting");
+    result.putString("type", "initializing");
     result.putString("message", "Starting connection with reader.");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgConnected() {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umConnection_connected");
+    result.putString("originalType", "umConnection_connected");
+    result.putString("type", "connected");
     result.putString("message", "Reader successfully connected.");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgDisconnected() {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umConnection_disconnected");
+    result.putString("originalType", "umConnection_disconnected");
+    result.putString("type", "disconnected");
     result.putString("message", "Reader has been disconnected.");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgTimeout(String strTimeoutMsg) {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umConnection_timeout");
-    result.putString("message", "Connecting with reader timed out. Please try again.");
-    sendEvent("IdTechUniMagEvent", result);
+    if ("Swipe card".equals(strTimeoutMsg)) {
+      result.putString("originalType", "umSwipe_timeout");
+      result.putString("type", "swipe_timeout");
+      result.putString("message", "Swipe timed out, please try again");
+    } else if ("Start Auto config failed".equals(strTimeoutMsg)) {
+      result.putString("originalType", "umAutoconfig_timeout");
+      result.putString("type", "autoconfig_timeout");
+      result.putString("message", "Autoconfiguration timeout");
+    } else if ("Connect the reader with unsupported phone".equals(strTimeoutMsg)) {
+      result.putString("originalType", "umDevice_unsupported");
+      result.putString("type", "device_unsupported");
+      result.putString("message", "Your device appears to be unsupported");
+    } else { // if ("Connect the reader".equals(strTimeoutMsg)) {
+      result.putString("originalType", "umConnection_timeout");
+      result.putString("type", "connection_timeout");
+      result.putString("message", "Connecting with reader timed out. Please try again.");
+    }
+    if (strTimeoutMsg != null) {
+      result.putString("originalMessage", strTimeoutMsg);
+    }
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgToSwipeCard() {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umSwipe_starting");
+    result.putString("originalType", "umSwipe_starting");
+    result.putString("type", "swiping");
     result.putString("message", "Waiting for card swipe...");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgCardData(byte flagOfCardData, byte[] cardData) {
-    String fullData = IDTechMSRAudioModule.bytesToHex(cardData);
-
-    UmCardData parser = new UmCardData(cardData);
-    WritableMap data = Arguments.createMap();
-    data.putBoolean("valid", parser.isValid);
-    data.putBoolean("aes", parser.isAesEncrypted);
-
-    WritableArray cardDataArray = Arguments.createArray();
-    cardDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track1));
-    cardDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track2));
-    cardDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track3));
-
-    WritableArray encryptedDataArray = Arguments.createArray();
-    encryptedDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track1_encrypted));
-    encryptedDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track2_encrypted));
-    encryptedDataArray.pushString(IDTechMSRAudioModule.bytesToHex(parser.track3_encrypted));
-
-    data.putArray("tracks", cardDataArray);
-    data.putArray("encrypted_tracks", encryptedDataArray);
-
-    data.putString("serial", IDTechMSRAudioModule.bytesToHex(parser.serialNumber));
-    data.putString("ksn", IDTechMSRAudioModule.bytesToHex(parser.KSN));
-    data.putString("raw", IDTechMSRAudioModule.bytesToHex(cardData));
-
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umSwipe_receivedSwipe");
+    result.putString("originalType", "umSwipe_receivedSwipe");
+    result.putString("type", "swipe_received");
     result.putString("message", "Successful card swipe");
-    // result.putInt("flagOfCardData", flagOfCardData);
-    result.putMap("data", data);
-    sendEvent("IdTechUniMagEvent", result);
+    result.putString("data", IDTechMSRAudioModule.bytesToHex(cardData));
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgProcessingCardData() {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umSwipe_processing_card_data");
+    result.putString("originalType", "umSwipe_processing_card_data");
+    result.putString("type", "swipe_processing");
     result.putString("message", "");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgToCalibrateReader() {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umSwipe_calibrate_card_reader");
+    result.putString("originalType", "umSwipe_calibrate_card_reader");
+    result.putString("type", "calibrate");
     result.putString("message", "");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgCommandResult(int commandID, byte[] cmdReturn) {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umCommand_result");
+    result.putString("originalType", "umCommand_result");
+    result.putString("type", "command_result");
     result.putString("message", Integer.toString(commandID));
     result.putString("result", new String(cmdReturn, java.nio.charset.StandardCharsets.ISO_8859_1));
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   @Deprecated
   public void onReceiveMsgSDCardDFailed(String strMSRData) {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umSD_card_failed");
+    result.putString("originalType", "umSD_card_failed");
+    result.putString("type", "sd_card_failed");
     result.putString("message", strMSRData);
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgFailureInfo(int index , String strMessage) {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umFail");
-    result.putString("message", strMessage);
-    result.putInt("index", index);
-    sendEvent("IdTechUniMagEvent", result);
+    if (index == 8) {
+      result.putString("originalType", "umConnection_lowVolume");
+      result.putString("type", "low_volume");
+      result.putString("message", strMessage);
+      result.putInt("index", index);
+    } else {
+      result.putString("originalType", "umFail");
+      result.putString("type", "failed");
+      result.putString("message", strMessage);
+      result.putInt("index", index);
+    }
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgAutoConfigProgress(int progressValue) {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umAutoconfig_progress");
+    result.putString("originalType", "umAutoconfig_progress");
+    result.putString("type", "autoconfig_progress");
     result.putString("message", Integer.toString(progressValue));
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgAutoConfigProgress(int percent, double res, String profileName) {
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umAutoconfig_progress");
+    result.putString("originalType", "umAutoconfig_progress");
+    result.putString("type", "autoconfig_progress");
     result.putString("message", Integer.toString(percent));
     result.putDouble("result", res);
     result.putString("profileName", profileName);
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
   }
 
   public void onReceiveMsgAutoConfigCompleted(StructConfigParameters profile) {
     if (!autoConfigProfile.saveAutoConfigProfile(profile, _reactContext)) {
       WritableMap saveResult = Arguments.createMap();
-      saveResult.putString("type", "umAutoconfig_save_failed");
+      saveResult.putString("originalType", "umAutoconfig_save_failed");
+      saveResult.putString("type", "autoconfig_save_failed");
       saveResult.putString("message", "Failed to save auto config profile.");
-      sendEvent("IdTechUniMagEvent", saveResult);
+      sendEvent(CALLBACK_EVENT_NAME, saveResult);
     }
 
-    sendEvent("IdTechUniMagEvent", autoConfigProfile.toWritableMap(profile));
+    sendEvent(CALLBACK_EVENT_NAME, autoConfigProfile.toWritableMap(profile));
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umAutoconfig_complete");
+    result.putString("originalType", "umAutoconfig_complete");
+    result.putString("type", "autoconfig_complete");
     result.putString("message", "Completed autoconfig. Connecting to reader.");
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
     _uniMagReader.connectWithProfile(profile);
   }
 
@@ -322,10 +337,11 @@ public class IDTechMSRAudioModule extends ReactContextBaseJavaModule implements 
 		}
 
     WritableMap result = Arguments.createMap();
-    result.putString("type", "umUser_grant");
+    result.putString("originalType", "umUser_grant");
+    result.putString("type", "user_permissions");
     result.putString("message", strMessage);
     result.putInt("result", type);
-    sendEvent("IdTechUniMagEvent", result);
+    sendEvent(CALLBACK_EVENT_NAME, result);
 
 		return getUserGranted;
   }

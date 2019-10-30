@@ -1,1 +1,2 @@
-export { parseSwipeData } from './parse';
+export * from './parse';
+export { default as READERS } from './readers';

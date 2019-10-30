@@ -53,12 +53,11 @@
   function parseEncryptedSwipeData(data) {
     var results = {
       tracks: [null, null, null],
-      encrypted_tracks: [null, null, null],
+      encryptedTracks: [null, null, null],
       serial: null,
       ksn: null,
       aes: false,
       valid: false,
-      payload: null,
       encrypted: true
     };
     var usableLength = data.length - 3; // Get track sizes from packet, bytes 5, 6, and 7 are track 1, 2, and 3
@@ -93,9 +92,6 @@
     var totalEncryptedLength = 0;
     var encryptedStartPosition = 10 + totalTrackLength; // Could also use nextTrackStartPosition
 
-    var payloadBegin = encryptedStartPosition; // Possibly - 4 ala UMCardData.m@169
-
-    var payloadEnd = payloadBegin;
     nextTrackStartPosition = encryptedStartPosition; // redundant
 
     for (var _dex = 0; _dex < encryptedLengths.length; _dex += 1) {
@@ -106,13 +102,11 @@
       }
 
       if (nextTrackStartPosition + encryptedLength > usableLength) throw new Error("Encrypted track length field ".concat(_dex, " indicated an incorrect index for its track ").concat(encryptedStartPosition + encryptedLength, " which exceeds the maximum index of ").concat(usableLength));
-      results.encrypted_tracks[_dex] = data.toString('hex', nextTrackStartPosition, nextTrackStartPosition + encryptedLength);
+      results.encryptedTracks[_dex] = data.toString('hex', nextTrackStartPosition, nextTrackStartPosition + encryptedLength);
       nextTrackStartPosition += encryptedLength;
       totalEncryptedLength += encryptedLength;
-      payloadEnd = nextTrackStartPosition;
-    }
+    } // KSN
 
-    results.payload = data.toString('hex', payloadBegin, payloadEnd); // KSN
 
     if (isBitSet(data[9], 7) && (isBitSet(data[9], 0) || isBitSet(data[9], 1) || isBitSet(data[9], 2))) {
       var ksnStart = usableLength - 10;
@@ -135,6 +129,13 @@
       results.serial = data.toString('hex', serialStart, serialStart + 10);
     }
 
+    var missingTracks = !results.tracks[0] && !results.tracks[1] && !results.tracks[2];
+    var missingEncrypted = !results.encryptedTracks[0] && !results.encryptedTracks[1] && !results.encryptedTracks[2];
+
+    if (missingTracks && missingEncrypted) {
+      throw new Error('All card tracks are missing, either card is incompatible or the swipe was imperfect, please try again');
+    }
+
     results.valid = true;
     return results;
   }
@@ -142,7 +143,6 @@
     var results = {
       tracks: [null, null, null],
       valid: false,
-      payload: null,
       iso: false,
       encrypted: false
     };
@@ -180,7 +180,6 @@
       }
     }
 
-    results.payload = data.toString('hex');
     return results;
   }
   /**
@@ -190,6 +189,9 @@
 
   function parseSwipeData(data) {
     var format = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'hex';
+    if (!data) return {
+      valid: false
+    };
     var bufferData = buffer.Buffer.isBuffer(data) ? data : buffer.Buffer.from(data, format);
     if (!bufferData || bufferData.length < 1) throw new Error('Buffer data formatted incorrectly');
 
@@ -213,6 +215,13 @@
     return string;
   }
 
+  var READERS = {
+    UNIMAG_1: 1,
+    UNIMAG_PRO: 2,
+    UNIMAG_2: 3,
+    SHUTTLE: 4
+  };
+
   var _NativeModules$IDTECH = reactNative.NativeModules.IDTECH_MSR_audio,
       activate = _NativeModules$IDTECH.activate,
       deactivate = _NativeModules$IDTECH.deactivate,
@@ -221,9 +230,11 @@
     activate: activate,
     deactivate: deactivate,
     swipe: swipe,
-    parseSwipeData: parseSwipeData
+    parseSwipeData: parseSwipeData,
+    READERS: READERS
   };
 
+  exports.READERS = READERS;
   exports.activate = activate;
   exports.deactivate = deactivate;
   exports.default = index;

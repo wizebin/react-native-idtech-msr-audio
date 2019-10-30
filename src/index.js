@@ -1,5 +1,6 @@
 import { NativeModules } from 'react-native';
 import { parseSwipeData } from './universal/parse';
+import READERS from './universal/readers';
 
 export const {
   activate,
@@ -7,6 +8,6 @@ export const {
   swipe,
 } = NativeModules.IDTECH_MSR_audio;
 
-export default { activate, deactivate, swipe, parseSwipeData };
+export default { activate, deactivate, swipe, parseSwipeData, READERS };
 
-export * from './universal/parse';
+export * from './universal/index';

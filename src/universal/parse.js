@@ -10,6 +10,7 @@ export function isSwipeEncrypted(data) {
   return false;
 }
 
+// Format of swipe: StartByte(0x02) Length(little endian, 2B) Payload() CheckXOR CheckSUM ETX(0x03)
 export function verifyEncryptedSwipeData(data) {
   if (data.length < 6) return { valid: false, message: 'Swipe data too short' };
   if (data[0] !== 2) return { valid: false, message: 'Swipe data does not start with correct token' };
@@ -35,12 +36,11 @@ export function verifyEncryptedSwipeData(data) {
 export function parseEncryptedSwipeData(data) {
   const results = {
     tracks: [null, null, null],
-    encrypted_tracks: [null, null, null],
+    encryptedTracks: [null, null, null],
     serial: null,
     ksn: null,
     aes: false,
     valid: false,
-    payload: null,
     encrypted: true,
   };
   const usableLength = data.length - 3;
@@ -70,7 +70,6 @@ export function parseEncryptedSwipeData(data) {
     totalTrackLength += trackLength;
   }
 
-
   // Encrypted block
   if (9 > usableLength) throw new Error('Cannot determine encryption type, usable length is too small to include the flag');
   const encryptionType = ((data[8] >> 4) & 3);
@@ -87,8 +86,6 @@ export function parseEncryptedSwipeData(data) {
 
   let totalEncryptedLength = 0;
   const encryptedStartPosition = 10 + totalTrackLength; // Could also use nextTrackStartPosition
-  const payloadBegin = encryptedStartPosition; // Possibly - 4 ala UMCardData.m@169
-  let payloadEnd = payloadBegin;
   nextTrackStartPosition = encryptedStartPosition; // redundant
 
   for (let dex = 0; dex < encryptedLengths.length; dex += 1) {
@@ -99,13 +96,10 @@ export function parseEncryptedSwipeData(data) {
 
     if (nextTrackStartPosition + encryptedLength > usableLength) throw new Error(`Encrypted track length field ${dex} indicated an incorrect index for its track ${encryptedStartPosition + encryptedLength} which exceeds the maximum index of ${usableLength}`);
 
-    results.encrypted_tracks[dex] = data.toString('hex', nextTrackStartPosition, nextTrackStartPosition + encryptedLength);
+    results.encryptedTracks[dex] = data.toString('hex', nextTrackStartPosition, nextTrackStartPosition + encryptedLength);
     nextTrackStartPosition += encryptedLength;
     totalEncryptedLength += encryptedLength;
-    payloadEnd = nextTrackStartPosition;
   }
-
-  results.payload = data.toString('hex', payloadBegin, payloadEnd);
 
   // KSN
   if (isBitSet(data[9], 7) && (isBitSet(data[9], 0) || isBitSet(data[9], 1) || isBitSet(data[9], 2))) {
@@ -125,6 +119,12 @@ export function parseEncryptedSwipeData(data) {
     results.serial = data.toString('hex', serialStart, serialStart + 10);
   }
 
+  const missingTracks = !results.tracks[0] && !results.tracks[1] && !results.tracks[2];
+  const missingEncrypted = !results.encryptedTracks[0] && !results.encryptedTracks[1] && !results.encryptedTracks[2];
+  if (missingTracks && missingEncrypted) {
+    throw new Error('All card tracks are missing, either card is incompatible or the swipe was imperfect, please try again');
+  }
+
   results.valid = true;
 
   return results;
@@ -134,7 +134,6 @@ export function parseUnencryptedSwipeData(data) {
   const results = {
     tracks: [null, null, null],
     valid: false,
-    payload: null,
     iso: false,
     encrypted: false,
   };
@@ -151,9 +150,11 @@ export function parseUnencryptedSwipeData(data) {
       if (byte === 0x25 || byte === 0x3B) {
         state.outsideTrack = false;
         results.iso = true;
+        results.type = byte === 0x25 ? 'ISO1' : 'ISO2';
       } else if (byte === 0x7F) {
         state.outsideTrack = false;
         results.iso = false;
+        results.type = 'JIS';
       } else if (byte === 0x0D) {
         if (dex === data.length - 1) {
           results.valid = true;
@@ -172,7 +173,6 @@ export function parseUnencryptedSwipeData(data) {
       }
     }
   }
-  results.payload = data.toString('hex');
 
   return results;
 }
@@ -182,6 +182,7 @@ export function parseUnencryptedSwipeData(data) {
  * @param {Buffer|string} data If passing a string parameter pass the format parameter if the string is not in hex format
  */
 export function parseSwipeData(data, format = 'hex') {
+  if (!data) return { valid: false };
   const bufferData = (Buffer.isBuffer(data)) ? data : Buffer.from(data, format);
   if (!bufferData || bufferData.length < 1) throw new Error('Buffer data formatted incorrectly');
 

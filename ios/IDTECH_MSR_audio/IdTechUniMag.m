@@ -166,14 +166,16 @@ RCT_REMAP_METHOD(swipe,
 //called when uniMag is physically attached
 - (void)umDevice_attachment:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umDevice_attachment",
+                     body:@{@"originalType": @"umDevice_attachment",
+                            @"type": @"attached",
                             @"message": @"Reader has been plugged in."}];
 }
 
 //called when uniMag is physically detached
 - (void)umDevice_detachment:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umDevice_detachment",
+                     body:@{@"originalType": @"umDevice_detachment",
+                            @"type": @"detached",
                             @"message": @"Reader has been unplugged."}];
 }
 
@@ -182,7 +184,8 @@ RCT_REMAP_METHOD(swipe,
 //called when attempting to start the connection task but iDevice's headphone playback volume is too low
 - (void)umConnection_lowVolume:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umConnection_lowVolume",
+                     body:@{@"originalType": @"umConnection_lowVolume",
+                            @"type": @"low_volume",
                             @"message": @"Volume too low. Please maximize volume then re-attach the reader."}];
 }
 
@@ -190,28 +193,24 @@ RCT_REMAP_METHOD(swipe,
 // feature is enabled
 - (void)umConnection_monoAudioError:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umConnection_monoAudioError",
+                     body:@{@"originalType": @"umConnection_monoAudioError",
+                            @"type": @"mono_audio_error",
                             @"message": @"Mono audio setting is enabled. Please disable it from iOS's Settings app."}];
 }
 
 //called when successfully starting the connection task
 - (void)umConnection_starting:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umConnection_starting",
+                     body:@{@"originalType": @"umConnection_starting",
+                            @"type": @"initializing",
                             @"message": @"Starting connection with reader."}];
-}
-
-//called when SDK failed to handshake with reader in time. ie, the connection task has timed out
-- (void)umConnection_timeout:(NSNotification *)notification {
-  [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umConnection_timeout",
-                            @"message": @"Connecting with reader timed out. Please try again."}];
 }
 
 //called when the connection task is successful. SDK's connection state changes to true
 - (void)umConnection_connected:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umConnection_connected",
+                     body:@{@"originalType": @"umConnection_connected",
+                            @"type": @"connected",
                             @"message": @"Reader successfully connected."}];
 }
 
@@ -219,8 +218,17 @@ RCT_REMAP_METHOD(swipe,
 // physically detached or when a disconnect API is called
 - (void)umConnection_disconnected:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umConnection_disconnected",
+                     body:@{@"originalType": @"umConnection_disconnected",
+                            @"type": @"disconnected",
                             @"message": @"Reader has been disconnected."}];
+}
+
+//called when SDK failed to handshake with reader in time. ie, the connection task has timed out
+- (void)umConnection_timeout:(NSNotification *)notification {
+  [self sendEventWithName:@"IdTechUniMagEvent"
+                     body:@{@"originalType": @"umConnection_timeout",
+                            @"type": @"connection_timeout",
+                            @"message": @"Connecting with reader timed out. Please try again."}];
 }
 
 #pragma mark swipe task
@@ -229,7 +237,8 @@ RCT_REMAP_METHOD(swipe,
 // wait for a swipe to be made
 - (void)umSwipe_starting:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umSwipe_starting",
+                     body:@{@"originalType": @"umSwipe_starting",
+                            @"type": @"swiping",
                             @"message": @"Waiting for card swipe..."}];
 }
 
@@ -238,7 +247,8 @@ RCT_REMAP_METHOD(swipe,
 // "swipe timeout interval".
 - (void)umSwipe_timeout:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umSwipe_timeout",
+                     body:@{@"originalType": @"umSwipe_timeout",
+                            @"type": @"swipe_timeout",
                             @"message": @"Swipe timed out. Please try again."}];
 }
 
@@ -247,14 +257,16 @@ RCT_REMAP_METHOD(swipe,
 // Use this to provide an early feedback on the UI
 - (void)umDataProcessing:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umDataProcessing",
+                     body:@{@"originalType": @"umDataProcessing",
+                            @"type": @"data_processing",
                             @"message": @"Processing swipe..."}];
 }
 
 //called when SDK failed to read a valid card swipe
 - (void)umSwipe_invalid:(NSNotification *)notification {
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umSwipe_invalid",
+                     body:@{@"originalType": @"umSwipe_invalid",
+                            @"type": @"swipe_invalid",
                             @"message": @"Failed to read a valid swipe. Please try again."}];
 }
 
@@ -284,37 +296,12 @@ RCT_REMAP_METHOD(swipe,
 //called when SDK received a swipe successfully
 - (void)umSwipe_receivedSwipe:(NSNotification *)notification {
   NSData *data = [NSData dataWithData: [notification object]];
-  UMCardData *cd = [[UMCardData alloc] initWithBytes:data];
-
-  // RCTConvert-serializable object
-  NSObject * swipeData;
-  NSArray * tracks = @[[IDTECH_MSR_audio hexValueOrNull:cd.track1], [IDTECH_MSR_audio hexValueOrNull:cd.track2], [IDTECH_MSR_audio hexValueOrNull:cd.track3]];
-  NSArray * encryptedTracks = @[[IDTECH_MSR_audio hexValueOrNull: cd.track1_encrypted], [IDTECH_MSR_audio hexValueOrNull: cd.track2_encrypted], [IDTECH_MSR_audio hexValueOrNull: cd.track3_encrypted]];
-
-  if (cd.isEncrypted) {
-    swipeData = @{
-      @"valid": [NSNumber numberWithBool:cd.isValid],
-      @"aes": [NSNumber numberWithBool:cd.isAesEncrypted],
-      @"tracks": tracks,
-      @"encrypted_tracks": encryptedTracks,
-      @"serial": [[NSString alloc] initWithData:cd.serialNumber encoding:NSISOLatin1StringEncoding],
-      @"ksn": [IDTECH_MSR_audio hexValueOrNull: cd.KSN],
-      @"raw": [IDTECH_MSR_audio hexValueOrNull: data]
-    };
-  }
-  else {
-    swipeData = @{
-      @"valid": [NSNumber numberWithBool:cd.isValid],
-      @"aes": [NSNumber numberWithBool:cd.isAesEncrypted],
-      @"tracks": tracks,
-      @"raw": [IDTECH_MSR_audio hexValueOrNull: data]
-    };
-  }
 
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umSwipe_receivedSwipe",
+                     body:@{@"originalType": @"umSwipe_receivedSwipe",
+                            @"type": @"swipe_received",
                             @"message": @"Successful swipe.",
-                            @"data": swipeData}];
+                            @"data": [IDTECH_MSR_audio hexValueOrNull: data]}];
 }
 
 #pragma mark command task
@@ -325,7 +312,8 @@ RCT_REMAP_METHOD(swipe,
 #ifdef DEBUG
   NSData *data = [notification object];
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umCommand_starting",
+                     body:@{@"originalType": @"umCommand_starting",
+                            @"type": @"command_starting",
                             @"message": repr(data)}];
 #endif
 }
@@ -335,7 +323,8 @@ RCT_REMAP_METHOD(swipe,
 - (void)umCommand_timeout:(NSNotification *)notification {
 #ifdef DEBUG
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umCommand_timeout",
+                     body:@{@"originalType": @"umCommand_timeout",
+                            @"type": @"command_timeout",
                             @"message": @"Command timed out. Please try again."}];
 #endif
 }
@@ -345,7 +334,8 @@ RCT_REMAP_METHOD(swipe,
 #ifdef DEBUG
   NSData *data = [notification object];
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umCommand_receivedResponse",
+                     body:@{@"originalType": @"umCommand_receivedResponse",
+                            @"type": @"command_response",
                             @"message": repr(data)}];
 #endif
 }
@@ -360,7 +350,8 @@ RCT_REMAP_METHOD(swipe,
     @"%ld: %@", (long)[err code], [[err userInfo] valueForKey:NSLocalizedDescriptionKey]];
 
   [self sendEventWithName:@"IdTechUniMagEvent"
-                     body:@{@"type": @"umSystemMessage",
+                     body:@{@"originalType": @"umSystemMessage",
+                            @"type": @"system_message",
                             @"message": sysMsg} ];
 }
 
