@@ -3,6 +3,7 @@
   "version": "1.0.4",
   "main": "dist/index.js",
   "author": "Peace Chen",
+  "homepage": "https://github.com/wizebin/react-native-idtech-msr-audio",
   "private": true,
   "scripts": {
     "test": "jest",
