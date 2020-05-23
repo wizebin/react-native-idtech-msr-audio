@@ -21,6 +21,5 @@ Pod::Spec.new do |s|
     "LIBRARY_SEARCH_PATHS" => "\"$(PROJECT_DIR)/../node_modules/#{s.name}/ios/uniMag-SDK\""
   }
 
-  s.vendored_libraries = 'ios/uniMag-SDK/libIDTECH_UniMag.a'
-  # s.libraries = 'IDTECH_UniMag'
+  s.vendored_libraries = 'ios/uniMag-SDK/IDTECH_UniMag.a'
 end
