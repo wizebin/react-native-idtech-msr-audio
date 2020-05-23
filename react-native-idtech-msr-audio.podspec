@@ -22,5 +22,5 @@ Pod::Spec.new do |s|
   }
 
   s.vendored_libraries = 'ios/uniMag-SDK/libIDTECH_UniMag.a'
-  s.libraries = 'IDTECH_UniMag'
+  # s.libraries = 'IDTECH_UniMag'
 end
