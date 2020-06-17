@@ -11,7 +11,8 @@
   function isSwipeEncrypted(data) {
     if (data[0] === 2) return true;
     return false;
-  }
+  } // Format of swipe: StartByte(0x02) Length(little endian, 2B) Payload() CheckXOR CheckSUM ETX(0x03)
+
   function verifyEncryptedSwipeData(data) {
     if (data.length < 6) return {
       valid: false,
@@ -159,9 +160,11 @@
         if (_byte2 === 0x25 || _byte2 === 0x3B) {
           state.outsideTrack = false;
           results.iso = true;
+          results.type = _byte2 === 0x25 ? 'ISO1' : 'ISO2';
         } else if (_byte2 === 0x7F) {
           state.outsideTrack = false;
           results.iso = false;
+          results.type = 'JIS';
         } else if (_byte2 === 0x0D) {
           if (dex === data.length - 1) {
             results.valid = true;
