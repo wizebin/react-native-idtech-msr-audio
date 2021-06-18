@@ -18,6 +18,8 @@ describe('parse.test', () => {
         null,
       ],
       'valid': true,
+      card_type: 128,
+      track_status: 31,
     });
   });
   it('parses encrypted credit card data from idtech example https://atlassian.idtechproducts.com/confluence/download/attachments/30479625/80000502-001%20ID%20TECH%20Encrypted%20Data%20Output%20Formats.pdf?api=v2', () => {
@@ -37,6 +39,8 @@ describe('parse.test', () => {
         null,
       ],
       'valid': true,
+      card_type: 128,
+      track_status: 63,
     });
   });
 });

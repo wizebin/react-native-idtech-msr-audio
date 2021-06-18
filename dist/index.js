@@ -59,13 +59,17 @@
       ksn: null,
       aes: false,
       valid: false,
-      encrypted: true
+      encrypted: true,
+      track_status: null,
+      card_type: null
     };
     var usableLength = data.length - 3; // Get track sizes from packet, bytes 5, 6, and 7 are track 1, 2, and 3
 
     var trackStartPosition = 5;
     if (trackStartPosition + 3 > usableLength) throw new Error('Data is too small to include track positions'); // Maybe don't throw
 
+    results.card_type = data[3];
+    results.track_status = data[4];
     var trackLengths = [data[trackStartPosition], data[trackStartPosition + 1], data[trackStartPosition + 2]];
     var nextTrackStartPosition = 10;
     var totalTrackLength = 0;
@@ -145,13 +149,17 @@
       tracks: [null, null, null],
       valid: false,
       iso: false,
-      encrypted: false
+      encrypted: false,
+      track_status: null,
+      card_type: null
     };
     var state = {
       outsideTrack: true,
       start: 0,
       index: 0
     };
+    results.card_type = data[3];
+    results.track_status = data[4];
 
     for (var dex = 0; dex < data.length; dex += 1) {
       var _byte2 = data[dex];

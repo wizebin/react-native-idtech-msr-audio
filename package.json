@@ -1,6 +1,7 @@
 {
   "name": "react-native-idtech-msr-audio",
-  "version": "1.0.5",
+  "description": "React native library to interact with IDTech credit card readers",
+  "version": "1.0.6",
   "main": "dist/index.js",
   "author": "Peace Chen",
   "homepage": "https://github.com/wizebin/react-native-idtech-msr-audio",

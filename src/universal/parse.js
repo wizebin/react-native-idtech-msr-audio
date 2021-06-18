@@ -42,12 +42,18 @@ export function parseEncryptedSwipeData(data) {
     aes: false,
     valid: false,
     encrypted: true,
+    track_status: null,
+    card_type: null,
   };
   const usableLength = data.length - 3;
 
   // Get track sizes from packet, bytes 5, 6, and 7 are track 1, 2, and 3
   const trackStartPosition = 5;
   if (trackStartPosition + 3 > usableLength) throw new Error('Data is too small to include track positions'); // Maybe don't throw
+
+  results.card_type = data[3];
+  results.track_status = data[4];
+
   const trackLengths = [
     data[trackStartPosition],
     data[trackStartPosition + 1],
@@ -136,6 +142,8 @@ export function parseUnencryptedSwipeData(data) {
     valid: false,
     iso: false,
     encrypted: false,
+    track_status: null,
+    card_type: null,
   };
 
   const state = {
@@ -143,6 +151,9 @@ export function parseUnencryptedSwipeData(data) {
     start: 0,
     index: 0,
   };
+
+  results.card_type = data[3];
+  results.track_status = data[4];
 
   for (let dex = 0; dex < data.length; dex += 1) {
     const byte = data[dex];
